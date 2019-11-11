@@ -1,6 +1,5 @@
 from __future__ import print_function
 import json
-import LabelDataStructure
 
 
 class IoU_Calculator:
@@ -22,6 +21,8 @@ class IoU_Calculator:
         self.image_dict = {}
         self.result_dict = {}
         self.data = ""
+        self.coco_labels = []
+        self.yolo_darknet_labels = []
 
 
         
@@ -107,8 +108,8 @@ class IoU_Calculator:
     '''
     def create_annotations_dataset(self):
         annotLength = len(self.data['annotations'])
-        print("Annotatioan")
-        print(self.data['annotations'][4])
+        # print("Annotatioan")
+        # print(self.data['annotations'][4])
         for i in range(annotLength):
             image_id = self.data['annotations'][i]['image_id']
             bbox = self.data['annotations'][i]['bbox']
@@ -133,7 +134,7 @@ class IoU_Calculator:
         right_gt = float((x_gt + w_gt))
         top_gt = float(y_gt)
         bot_gt = float((y_gt + h_gt))
-        print(left_gt, top_gt, right_gt, bot_gt)
+        # print(left_gt, top_gt, right_gt, bot_gt)
         box_groundtruth = [left_gt, top_gt, right_gt, bot_gt]
         return box_groundtruth
 
@@ -157,6 +158,13 @@ class IoU_Calculator:
 
     Takes in two bounding boxes, each with format [left, top, right, bot]
     Returns the IOU score.
+
+    SINGLE IMAGE IOU CALCULATIONS
+    The coordinates need to follow the conversions:
+    left_gt,top_gt,right_gt,bot_gt as well as the conversions for left,top,right,bot.
+
+    Ground truth format from the annotations: top left corner x, top left corner y, width, height
+    Our Darknet format from the our result_dict: midpoint x, midpoint y, width, height
     ''' 
     def bb_intersection_over_union(self, boxA, boxB):
         # determine the (x, y)-coordinates of the intersection rectangle
@@ -189,6 +197,35 @@ class IoU_Calculator:
         # print(*labels,sep='\n')
         return labels
 
+    """
+    Perform IoU calculation on all the images in results.
+    
+    NOTE: That there may return multiple values from a single imageIDKey because there are multiple object detections 
+    in a single image. In this case, you will need to match the category ID's with each other and calculate the IOU.
+
+    NOTE: Now there may be multiple objects with the same category ID. You will need to do a N^2 comparison 
+    of the values with each other. We can assume that the highest IOU between a pair of bounding boxes should
+    be matched with each other.
+
+    NOTE: There may also be cases where there are extra bounding boxes which are not matched. We need to consider this.
+    Perhaps ignore them, perhaps take some sort of note. 
+    """
+    def calc_iou_datasets(self):
+        iou_scores = []
+        for image_key in self.result_dict:
+            groundtruth_boundingbox = self.annotations_dict[image_key][0]['bbox']            
+            yolo_boundingbox = self.result_dict[image_key][0]
+            # Parse values to matching formats.
+            gt_bbox = self.groundTruthParse(groundtruth_boundingbox)
+            yolo_bbox = self.yoloBoxParse(yolo_boundingbox)            
+            # Check the category ID's to make sure they match.            
+            gt_cat_id = self.annotations_dict[image_key][0]['category_id']
+            yolo_cat_id = self.result_dict[image_key][0][0]            
+            if (self.coco_labels[int(gt_cat_id)] == self.yolo_darknet_labels[int(yolo_cat_id)]):
+                iou_score = self.bb_intersection_over_union(gt_bbox, yolo_bbox)                
+                iou_scores.append((gt_cat_id, iou_score))
+        return iou_scores
+
 
     
 if __name__ == '__main__':
@@ -197,21 +234,18 @@ if __name__ == '__main__':
     coco_labels = iou.parseTextFileToDataStructure("data/coco_labels.txt")
     darknet_coco_labels = iou.parseTextFileToDataStructure("data/Darknet_COCO_labels.txt") 
     # Setup IoU data structures.
+    iou.coco_labels = coco_labels
+    iou.yolo_darknet_labels = darknet_coco_labels
     iou.load_JSON()
     iou.create_image_dataset()
     iou.create_annotations_dataset()   
-    iou.create_result_dataset()
-    '''
-    SINGLE IMAGE IOU CALCULATIONS
-    The coordinates need to follow the conversions:
-    left_gt,top_gt,right_gt,bot_gt as well as the conversions for left,top,right,bot.
+    iou.create_result_dataset()        
+    
+    # print(iou.annotations_dict[76872][0])        
+    # print(iou.result_dict[76872][0])
 
-    Ground truth format from the annotations: top left corner x, top left corner y, width, height
-    Our Darknet format from the our result_dict: midpoint x, midpoint y, width, height
-    '''
-    # Ground Truth Values
-    bbox_gt = iou.annotations_dict[374458][0]['bbox']
-    box_groundtruth = iou.groundTruthParse(bbox_gt)
-    box_yolo = iou.yoloBoxParse(iou.result_dict[374458][0])
-    iou_score = iou.bb_intersection_over_union(box_groundtruth,box_yolo)
-    print(iou_score)
+    # Perform IoU calculation for all elements in results_dataset.
+    iou_scores = iou.calc_iou_datasets()
+    print(iou_scores)
+    # TODO: Store data into pandas DF, then export as PKL.
+    # TODO: Rinse, lather, repeat, for results.txt in different yolo directories.

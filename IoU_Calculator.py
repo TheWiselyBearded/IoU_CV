@@ -1,5 +1,7 @@
 from __future__ import print_function
 import json
+import urllib.parse
+import urllib.request
 
 
 class IoU_Calculator:
@@ -39,7 +41,7 @@ class IoU_Calculator:
 
     If the flag is false, then following lines don't get added.
     '''
-    def create_result_dataset(self, filename="data/result.txt"):
+    def create_result_dataset(self, filename="data/resultFrank.txt"):
         result_yolov3 = open(filename, "r")
         result_yolov3_read = result_yolov3.readlines()
 
@@ -213,17 +215,85 @@ class IoU_Calculator:
     def calc_iou_datasets(self):
         iou_scores = []
         for image_key in self.result_dict:
-            groundtruth_boundingbox = self.annotations_dict[image_key][0]['bbox']            
-            yolo_boundingbox = self.result_dict[image_key][0]
-            # Parse values to matching formats.
-            gt_bbox = self.groundTruthParse(groundtruth_boundingbox)
-            yolo_bbox = self.yoloBoxParse(yolo_boundingbox)            
-            # Check the category ID's to make sure they match.            
-            gt_cat_id = self.annotations_dict[image_key][0]['category_id']
-            yolo_cat_id = self.result_dict[image_key][0][0]            
-            if (self.coco_labels[int(gt_cat_id)] == self.yolo_darknet_labels[int(yolo_cat_id)]):
-                iou_score = self.bb_intersection_over_union(gt_bbox, yolo_bbox)                
-                iou_scores.append((gt_cat_id, iou_score))
+            temp_dict_IoU = {}
+            
+            # N^2 comparisons
+            for result_dict_value in self.result_dict[image_key]:
+                yolo_boundingbox = result_dict_value
+                yolo_cat_id = result_dict_value[0]
+                yolo_bbox = self.yoloBoxParse(yolo_boundingbox)
+                yolo_cat_string = self.yolo_darknet_labels[int(yolo_cat_id)]
+                
+                for annot_dict_value in self.annotations_dict[image_key]:
+                    groundtruth_boundingbox = annot_dict_value['bbox']
+                    gt_cat_id = annot_dict_value['category_id']
+                    gt_bbox = self.groundTruthParse(groundtruth_boundingbox)
+                    gt_cat_string = self.coco_labels[int(gt_cat_id)]
+                    
+                    if (yolo_cat_string == gt_cat_string):
+                        iou_score = self.bb_intersection_over_union(gt_bbox, yolo_bbox)
+                        if (not yolo_cat_string in temp_dict_IoU):
+                            temp_dict_IoU[yolo_cat_string] = iou_score
+                        else:
+                            if (iou_score > temp_dict_IoU[yolo_cat_string]):
+                                temp_dict_IoU[yolo_cat_string] = iou_score
+            
+            if (len(temp_dict_IoU) > 0):
+                average_iou_ofImage = sum(temp_dict_IoU.values())/len(temp_dict_IoU)
+                iou_scores.append((image_key, average_iou_ofImage))
+            else: 
+                iou_scores.append((image_key, 0))
+            
+            
+            # Unit test to compare with Jupyter NoteBook Results
+            '''
+            if (image_key == 217186):
+                groundtruth_boundingbox = self.annotations_dict[image_key][0]['bbox']            
+                yolo_boundingbox = self.result_dict[image_key][0]
+                # Parse values to matching formats.
+                gt_bbox = self.groundTruthParse(groundtruth_boundingbox)
+                yolo_bbox = self.yoloBoxParse(yolo_boundingbox)            
+                # Check the category ID's to make sure they match.            
+                gt_cat_id = self.annotations_dict[image_key][0]['category_id']
+                yolo_cat_id = self.result_dict[image_key][0][0]
+                
+                iou_score = self.bb_intersection_over_union(gt_bbox, yolo_bbox)
+  
+                # Unit test 1,  image_key = 374458
+                print("Ground Truth BBox")
+                print(gt_bbox)
+                print("Ground Truth ID")
+                print(gt_cat_id)
+                print("Ground Label")
+                print(self.coco_labels[int(gt_cat_id)])
+                print("Yolo bbox")
+                print(yolo_bbox)
+                print("Yolo ID")
+                print(yolo_cat_id)
+                print("Yolo Label")
+                print(self.yolo_darknet_labels[int(yolo_cat_id)])
+                print("IOU")
+                print(iou_score)
+                print(len(self.result_dict[image_key]))
+                
+                
+                
+                # Unit test 2, multiple bounding boxes, print from results
+                print("Bounding boxes from Result")
+                for value in self.result_dict[image_key]:
+                    print(value)
+                    #print(self.yolo_darknet_labels[int(value[0])])
+                
+                print("Annotation boxes")
+                for value in self.annotations_dict[image_key]:
+                    print(self.coco_labels[int(value['category_id'])])
+                    #print("BBox")
+                    #print(value['bbox'])                
+                
+            #if (self.coco_labels[int(gt_cat_id)] == self.yolo_darknet_labels[int(yolo_cat_id)]):
+            #    iou_score = self.bb_intersection_over_union(gt_bbox, yolo_bbox)                
+            #    iou_scores.append((gt_cat_id, iou_score))
+            '''
         return iou_scores
 
 
@@ -246,6 +316,8 @@ if __name__ == '__main__':
 
     # Perform IoU calculation for all elements in results_dataset.
     iou_scores = iou.calc_iou_datasets()
+    
     print(iou_scores)
+    
     # TODO: Store data into pandas DF, then export as PKL.
     # TODO: Rinse, lather, repeat, for results.txt in different yolo directories.

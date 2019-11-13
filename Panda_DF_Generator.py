@@ -1,6 +1,7 @@
-# import pandas to use pandas DataFrame 
+from __future__ import print_function
+from ast import literal_eval
 import pandas as pd 
-  
+
 # Write each tuple per line into txt file.
 def assignListToTxt(data, filename='train_result.txt'):
     file = open(filename,'w') # Creates file if it doesn't exist.
@@ -19,8 +20,15 @@ def convertTxtToList(filename, debug=False):
     for line in (yolo_read):
         if (debug):
             print(line)
-        data.append(line)
+        data.append(literal_eval(line))
     return data
+
+def find_ID_tuple(id, L):
+    for idx, val in enumerate(L):
+        # print("index is %d and value is %s" % (idx, val))        
+        if (str(val[0]) == str(id)):
+            return idx
+    return -1
 
 """ 
 Read list of txt files, ["file1.txt", "file2.txt", "file3.txt"]
@@ -31,9 +39,7 @@ def combineTxtFiles(files):
     full_data = open("combined_data.txt", "w")
     for file in files:
         full_data.write(file.read())
-    dataset = convertTxtToList(full_data)
-    # TODO: Change txt file tuple to contain entries for each respective yolo.
-    # generatePandaDF(dataset)
+    return full_data
 
   
 """
@@ -44,5 +50,44 @@ def generatePandaDF(data, debug=False):
     # create DataFrame using data 
     df = pd.DataFrame(data, columns =['ImageID', 'IoU_yoloV3', 'IoU_yoloV2', 'IoU_yolo_tiny']) 
     if (debug):
-        print(df)  
+        print(df.to_string())  
     return df
+
+def combineLists(yolov3, yolov2, yolo_t):
+    # Generate list of maximum needed size
+    max_size = max(len(yolov3), len(yolov2), len(yolo_t))
+    iou_data = [None] * max_size
+    # Iterate over lists and update elements based on image ID.
+    for x in range(max_size):
+        # Assign iou score from v3
+        tuple_el = [yolov3[x][0],yolov3[x][1],None,None]
+        # Find index for matching image ID from y3 for y2 and tiny.
+        idx = find_ID_tuple(yolov3[x][0], yolov2)   
+        idx_t = find_ID_tuple(yolov3[x][0], yolo_t)
+        if (idx != -1):
+            tuple_el[2] = yolov2[idx][1]      # Assign iou score from v2
+        if (idx_t != -1):
+            tuple_el[3] = yolo_t[idx_t][1]    # Assign iou score from tiny
+        # Assign tuple element.
+        iou_data[x] = tuple(tuple_el)
+    return iou_data
+
+
+
+if __name__ == "__main__":
+    files = ['yolo_tiny_v3.txt','yolo_v2.txt','yolo_v3.txt']
+
+    y3 = convertTxtToList(files[2]) 
+    y2 = convertTxtToList(files[1]) 
+    y_tiny = convertTxtToList(files[0]) 
+    iou_data = combineLists(y3,y2,y_tiny)    
+    # print(*iou_data,sep='\n')
+    df = generatePandaDF(iou_data, True)
+    df.to_pickle("./iou_scores.pkl")
+    df.to_csv("./iou_scores.csv",index=False)
+
+
+
+
+
+    

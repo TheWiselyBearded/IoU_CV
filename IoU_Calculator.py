@@ -2,6 +2,8 @@ from __future__ import print_function
 import json
 import urllib.parse
 import urllib.request
+import sys
+import Panda_DF_Generator as pd_DF
 
 
 class IoU_Calculator:
@@ -25,10 +27,11 @@ class IoU_Calculator:
         self.data = ""
         self.coco_labels = []
         self.yolo_darknet_labels = []
+        self.iou_scores = []
 
 
         
-    def load_JSON(self, filename="data/json/instances_train2014.json"):
+    def load_JSON(self, filename="data/json/instances_val2014.json"):
         with open(filename, "r") as read_file:
             self.data = json.load(read_file)
 
@@ -41,7 +44,7 @@ class IoU_Calculator:
 
     If the flag is false, then following lines don't get added.
     '''
-    def create_result_dataset(self, filename="data/resultFrank.txt"):
+    def create_result_dataset(self, filename="data/darknet_results.txt"):
         result_yolov3 = open(filename, "r")
         result_yolov3_read = result_yolov3.readlines()
 
@@ -212,8 +215,7 @@ class IoU_Calculator:
     NOTE: There may also be cases where there are extra bounding boxes which are not matched. We need to consider this.
     Perhaps ignore them, perhaps take some sort of note. 
     """
-    def calc_iou_datasets(self):
-        iou_scores = []
+    def calc_iou_datasets(self):        
         for image_key in self.result_dict:
             temp_dict_IoU = {}
             
@@ -240,9 +242,9 @@ class IoU_Calculator:
             
             if (len(temp_dict_IoU) > 0):
                 average_iou_ofImage = sum(temp_dict_IoU.values())/len(temp_dict_IoU)
-                iou_scores.append((image_key, average_iou_ofImage))
+                self.iou_scores.append((image_key, average_iou_ofImage))
             else: 
-                iou_scores.append((image_key, 0))
+                self.iou_scores.append((image_key, 0))
             
             
             # Unit test to compare with Jupyter NoteBook Results
@@ -294,7 +296,7 @@ class IoU_Calculator:
             #    iou_score = self.bb_intersection_over_union(gt_bbox, yolo_bbox)                
             #    iou_scores.append((gt_cat_id, iou_score))
             '''
-        return iou_scores
+        return self.iou_scores
 
 
     
@@ -309,15 +311,20 @@ if __name__ == '__main__':
     iou.load_JSON()
     iou.create_image_dataset()
     iou.create_annotations_dataset()   
-    iou.create_result_dataset()        
-    
+    iou.create_result_dataset("results/result_tiny_yolo.txt")            
     # print(iou.annotations_dict[76872][0])        
     # print(iou.result_dict[76872][0])
 
     # Perform IoU calculation for all elements in results_dataset.
     iou_scores = iou.calc_iou_datasets()
-    
     print(iou_scores)
+
+    # Retrieve parameter for main method to write txt file value.
+    if (len(sys.argv) > 1):
+        pd_DF.assignListToTxt(iou_scores,str(sys.argv[1]))
+    else:
+        pd_DF.assignListToTxt(iou_scores)
+    
     
     # TODO: Store data into pandas DF, then export as PKL.
     # TODO: Rinse, lather, repeat, for results.txt in different yolo directories.

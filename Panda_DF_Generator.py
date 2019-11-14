@@ -57,10 +57,18 @@ def combineLists(yolov3, yolov2, yolo_t):
     # Generate list of maximum needed size
     max_size = max(len(yolov3), len(yolov2), len(yolo_t))
     iou_data = [None] * max_size
-    # Iterate over lists and update elements based on image ID.
+    # Iterate over lists and update elements based on image ID.    
     for x in range(max_size):
         # Assign iou score from v3
         tuple_el = [yolov3[x][0],yolov3[x][1],0,0]
+        # Prepend series of 0s.
+        if (len(str(yolov3[x][0])) < 10):
+            num_zeros = 10 - len(str(yolov3[x][0]))
+            prepend_zeros = "0" * num_zeros
+            image_id = prepend_zeros + str(yolov3[x][0]) + '.jpg'
+            tuple_el[0] = image_id
+            # NOTE: If wishing to add .jpg extension, or store value as string
+            # Edit script here.
         # Find index for matching image ID from y3 for y2 and tiny.
         idx = find_ID_tuple(yolov3[x][0], yolov2)   
         idx_t = find_ID_tuple(yolov3[x][0], yolo_t)

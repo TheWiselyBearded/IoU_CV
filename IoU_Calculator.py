@@ -31,7 +31,7 @@ class IoU_Calculator:
 
 
         
-    def load_JSON(self, filename="data/json/instances_val2014.json"):
+    def load_JSON(self, filename="data/json/instances_val2017.json"):
         with open(filename, "r") as read_file:
             self.data = json.load(read_file)
 
@@ -91,9 +91,9 @@ class IoU_Calculator:
     def create_image_dataset(self):
         for i in range(len(self.data['images'])):
             # For 2014 Json
-            file_name = self.data['images'][i]['file_name'][15:]            
+            # file_name = self.data['images'][i]['file_name'][15:]            
             # For 2017 Json
-            #file_name = data['images'][i]['file_name']
+            file_name = self.data['images'][i]['file_name']
             image_id_name = int(''.join([ i.lstrip('0') for i in file_name ]).split('.')[0])
             im_height = self.data['images'][i]['height']
             im_width = self.data['images'][i]['width']
@@ -311,7 +311,7 @@ if __name__ == '__main__':
     iou.load_JSON()
     iou.create_image_dataset()
     iou.create_annotations_dataset()   
-    iou.create_result_dataset("results/result_tiny_yolo.txt")            
+    iou.create_result_dataset("results/result_yolov2.txt")            
     # print(iou.annotations_dict[76872][0])        
     # print(iou.result_dict[76872][0])
 

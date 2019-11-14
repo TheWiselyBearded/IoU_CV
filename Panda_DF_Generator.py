@@ -60,7 +60,7 @@ def combineLists(yolov3, yolov2, yolo_t):
     # Iterate over lists and update elements based on image ID.
     for x in range(max_size):
         # Assign iou score from v3
-        tuple_el = [yolov3[x][0],yolov3[x][1],None,None]
+        tuple_el = [yolov3[x][0],yolov3[x][1],0,0]
         # Find index for matching image ID from y3 for y2 and tiny.
         idx = find_ID_tuple(yolov3[x][0], yolov2)   
         idx_t = find_ID_tuple(yolov3[x][0], yolo_t)

@@ -62,8 +62,8 @@ def combineLists(yolov3, yolov2, yolo_t):
         # Assign iou score from v3
         tuple_el = [yolov3[x][0],yolov3[x][1],0,0]
         # Prepend series of 0s.
-        if (len(str(yolov3[x][0])) < 10):
-            num_zeros = 10 - len(str(yolov3[x][0]))
+        if (len(str(yolov3[x][0])) < 12):
+            num_zeros = 12 - len(str(yolov3[x][0]))
             prepend_zeros = "0" * num_zeros
             image_id = prepend_zeros + str(yolov3[x][0]) + '.jpg'
             tuple_el[0] = image_id

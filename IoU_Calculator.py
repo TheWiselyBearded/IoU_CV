@@ -299,7 +299,11 @@ class IoU_Calculator:
         return self.iou_scores
 
 
-    
+# To run file, you must supply the result.txt file being read,
+# and the txt file to write average IoU scores too.
+# Ex:
+#     python3 IoU_Calculator.py result_yolov3.txt yolov3.txt
+#     python3 IoU_Calculator.py result_yolov2.txt yolov2.txt
 if __name__ == '__main__':
     iou = IoU_Calculator()
     # Store labels in memory as lists.
@@ -310,21 +314,10 @@ if __name__ == '__main__':
     iou.yolo_darknet_labels = darknet_coco_labels
     iou.load_JSON()
     iou.create_image_dataset()
-    iou.create_annotations_dataset()   
-    iou.create_result_dataset("results/result_yolov2.txt")            
-    # print(iou.annotations_dict[76872][0])        
-    # print(iou.result_dict[76872][0])
-
+    iou.create_annotations_dataset()       
+    dataset_path = "result/" + str(sys.argv[1])
+    iou.create_result_dataset(dataset_path)            
     # Perform IoU calculation for all elements in results_dataset.
     iou_scores = iou.calc_iou_datasets()
     print(iou_scores)
-
-    # Retrieve parameter for main method to write txt file value.
-    if (len(sys.argv) > 1):
-        pd_DF.assignListToTxt(iou_scores,str(sys.argv[1]))
-    else:
-        pd_DF.assignListToTxt(iou_scores)
-    
-    
-    # TODO: Store data into pandas DF, then export as PKL.
-    # TODO: Rinse, lather, repeat, for results.txt in different yolo directories.
+    pd_DF.assignListToTxt(iou_scores,str(sys.argv[2]))
